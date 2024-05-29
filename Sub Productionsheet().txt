@@ -1,0 +1,313 @@
+Sub Productionarray()
+
+
+
+    Dim sourceSheet As Worksheet
+    Dim destinationSheet As Worksheet
+    Dim sourceRange As Range
+    Dim filteredRange As Range
+    Dim lastRow As Long
+    Dim sheet As Integer
+    Dim first_sheet As Integer, last_sheet As Integer
+    Dim sortRange() As Variant, splitRange() As Variant, splitRange1() As Variant
+    Dim Airline() As Variant
+    
+    
+    
+    first_sheet = InputBox("Enter first sheet value")
+    last_sheet = InputBox("Enter last sheet value")
+    
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+
+    
+    For sheet = first_sheet To last_sheet
+
+    Set sourceSheet = ThisWorkbook.Sheets("June")
+    lastRow = sourceSheet.Cells(sourceSheet.Rows.Count, "A").End(xlUp).row
+    
+    Airline = sourceSheet.Range("A1").CurrentRegion.Value
+   
+    Set sourceRange = sourceSheet.Range("O1:O" & lastRow)
+    sourceSheet.Cells.ClearFormats
+    
+
+    If sheet < 10 Then
+    
+    sourceRange.AutoFilter Field:=1, Criteria1:="" & sheet & "*", Criteria2:="*DAILY*", Operator:=xlOr
+    Else
+    
+    sourceRange.AutoFilter Field:=1, Criteria1:="*" & sheet & "*", Criteria2:="*DAILY*", Operator:=xlOr
+    
+    End If
+       
+    Set filteredRange = sourceSheet.Range("A1:AC5000")
+    
+    
+    Set destinationSheet = ThisWorkbook.Worksheets(CStr(sheet))
+    destinationSheet.Range("A1").ClearContents
+
+    
+    filteredRange.Copy destinationSheet.Range("A1")
+    
+    destinationSheet.Range("A:Q").Delete
+    
+    'call function
+    
+    splitRange = destinationSheet.Range("A1").CurrentRegion.Value
+    
+    splitRange = SplitArray(splitRange)
+    splitRange = SplitArray1(splitRange)
+   
+    
+   ' sortRange = destinationSheet.Range("A1").CurrentRegion.Value
+    
+ splitRange = SortArray(splitRange)
+    
+   
+ For i = 1 To UBound(splitRange, 1)
+            For j = 1 To UBound(splitRange, 2)
+             destinationSheet.Cells(i, j).Value = splitRange(i, j)
+             Next j
+         Next i
+
+ 'Subtotal--------------------------------------------------
+    destinationSheet.Range("A1:L" & Cells(Rows.Count, "L").End(xlDown).row).Subtotal GroupBy:=6, Function:=xlSum, _
+    TotalList:=Array(10, 11), Replace:=True, PageBreaks:=False
+    
+    
+With destinationSheet
+            
+    For i1 = 2 To lastRow
+        ' Check if the current cell is empty
+        If Cells(i1, 1).Value = "" Then
+            ' Copy the contents of the previous cell
+            Cells(i1, 1).Value = Cells(i1 - 1, 1).Value
+            Cells(i1, 2).Value = Cells(i1 - 1, 2).Value
+            
+        End If
+    Next i1
+    End With
+
+    
+    sourceSheet.AutoFilterMode = False
+    destinationSheet.Columns.AutoFit
+    
+     
+     
+     
+Next sheet
+    
+    Application.ScreenUpdating = True
+    Application.Calculation = xlCalculationAutomatic
+ 
+
+MsgBox ("Done")
+    
+    End Sub
+    
+'---------------------------Splitting
+Function SplitArray(ByRef Airline() As Variant) As Variant()
+Dim i, j, row As Long
+Dim rowCount As Long
+rowCount = UBound(Airline, 1)
+
+Dim columnCount As Long
+columnCount = UBound(Airline, 2)
+
+Dim delimiter As String
+delimiter = "/"
+
+Dim splitRow() As String
+Dim newRowCount As Long
+newRowCount = rowCount
+
+' Loop through the rows of the Airline array
+For i = 1 To rowCount
+    ' Split the cell value based on the delimiter
+    splitRow = Split(Airline(i, 1), delimiter)
+    
+    ' If the splitRow array has more than one element, increment the newRowCount
+    If UBound(splitRow) > 0 Then
+        newRowCount = newRowCount + UBound(splitRow)
+    End If
+Next i
+
+' Resize the targetArray to accommodate the split rows and corresponding columns
+Dim targetArray() As Variant
+ReDim targetArray(1 To newRowCount, 1 To columnCount)
+
+Dim targetIndex As Long
+targetIndex = 1
+
+' Loop through the rows of the Airline array again
+For i = 1 To rowCount
+    splitRow = Split(Airline(i, 1), delimiter)
+    
+    ' Copy the original row to the targetArray
+    For j = 1 To columnCount
+        targetArray(targetIndex, j) = Airline(i, j)
+    Next j
+    
+    ' If the splitRow array has more than one element, copy the split elements to the targetArray
+    If UBound(splitRow) > 0 Then
+        ' Copy the corresponding columns to the targetArray
+        For m = 0 To UBound(splitRow)
+           
+            ' Copy the original row values to the targetArray
+            For j = 1 To columnCount
+                targetArray(targetIndex, j) = Airline(i, j)
+            Next j
+            ' Assign the split value to the first column of the targetArray
+            targetArray(targetIndex, 1) = splitRow(m)
+             targetIndex = targetIndex + 1
+        Next m
+   
+    Else
+    targetIndex = targetIndex + 1
+     End If
+Next i
+
+SplitArray = targetArray
+
+End Function
+    
+'---------------------------Splitting---------2----------------
+Function SplitArray1(ByRef Airline() As Variant) As Variant()
+Dim i, j, row As Long
+Dim rowCount As Long
+rowCount = UBound(Airline, 1)
+
+Dim columnCount As Long
+columnCount = UBound(Airline, 2)
+
+Dim delimiter As String
+delimiter = "/"
+
+Dim splitRow() As String
+Dim newRowCount As Long
+newRowCount = rowCount
+
+' Loop through the rows of the Airline array
+For i = 1 To rowCount
+    ' Split the cell value based on the delimiter
+    splitRow = Split(Airline(i, 2), delimiter)
+    
+    ' If the splitRow array has more than one element, increment the newRowCount
+    If UBound(splitRow) > 0 Then
+        newRowCount = newRowCount + UBound(splitRow)
+    End If
+Next i
+
+' Resize the targetArray to accommodate the split rows and corresponding columns
+Dim targetArray() As Variant
+ReDim targetArray(1 To newRowCount, 1 To columnCount)
+
+Dim targetIndex As Long
+targetIndex = 1
+
+' Loop through the rows of the Airline array again
+For i = 1 To rowCount
+    splitRow = Split(Airline(i, 2), delimiter)
+    
+    ' Copy the original row to the targetArray
+    For j = 1 To columnCount
+        targetArray(targetIndex, j) = Airline(i, j)
+    Next j
+    
+    ' If the splitRow array has more than one element, copy the split elements to the targetArray
+    If UBound(splitRow) > 0 Then
+        ' Copy the corresponding columns to the targetArray
+        For m = 0 To UBound(splitRow)
+           
+            ' Copy the original row values to the targetArray
+            For j = 1 To columnCount
+                targetArray(targetIndex, j) = Airline(i, j)
+            Next j
+            ' Assign the split value to the first column of the targetArray
+            targetArray(targetIndex, 2) = splitRow(m)
+             targetIndex = targetIndex + 1
+        Next m
+   
+    Else
+    targetIndex = targetIndex + 1
+     End If
+Next i
+
+SplitArray1 = targetArray
+
+End Function
+
+
+'----------Sorting-----------------------------------
+Function SortArray(ByRef arr() As Variant) As Variant()
+    Dim rowCount As Long
+    Dim columnCount As Long
+    Dim i As Long, j As Long, k As Long
+    Dim temp As Variant
+    
+    rowCount = UBound(arr, 1)
+    columnCount = UBound(arr, 2)
+    
+    ' Bubble sort algorithm
+    For i = 2 To rowCount
+        For j = 2 To rowCount - 1
+            ' Compare values in columns 18, 19, and 23
+       
+           If (arr(j, 1) > arr(j + 1, 1) Or _
+               (arr(j, 1) = arr(j + 1, 1) And arr(j, 2) > arr(j + 1, 2)) Or _
+               (arr(j, 1) = arr(j + 1, 1) And arr(j, 2) = arr(j + 1, 2) And arr(j, 6) > arr(j + 1, 6))) Then
+               
+                ' Swap rows
+                For k = 1 To columnCount
+                    temp = arr(j, k)
+                    arr(j, k) = arr(j + 1, k)
+                    arr(j + 1, k) = temp
+                Next k
+                
+            End If
+        Next j
+    Next i
+    SortArray = arr
+End Function
+Function FilterEmptyRows(arr() As Variant) As Variant()
+    Dim result() As Variant
+    Dim resultIndex As Long
+    Dim i As Long, j As Long
+    Dim rowCount As Long
+    Dim columnCount As Long
+    
+    rowCount = UBound(arr, 1)
+    columnCount = UBound(arr, 2)
+    
+    ReDim result(1 To rowCount, 1 To columnCount)
+    resultIndex = 0
+    
+    For i = 1 To rowCount
+        Dim isEmptyRow As Boolean
+        isEmptyRow = True
+        
+        For j = 1 To columnCount
+            If Not IsEmpty(arr(i, j)) Then
+                isEmptyRow = False
+                Exit For
+            End If
+        Next j
+        
+        If Not isEmptyRow Then
+            resultIndex = resultIndex + 1
+            For j = 1 To columnCount
+                result(resultIndex, j) = arr(i, j)
+            Next j
+        End If
+    Next i
+    
+    If resultIndex > 0 Then
+        ReDim Preserve result(1 To resultIndex, 1 To columnCount)
+    Else
+        ReDim result(1 To 1, 1 To columnCount)
+    End If
+    
+    FilterEmptyRows = result
+End Function
+
